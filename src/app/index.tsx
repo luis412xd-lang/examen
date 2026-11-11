@@ -1,98 +1,85 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator, Button,
+  FlatList,
+  Image,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Product } from "../infrastructure/interfaces/product.interface";
+import { getProducts } from "../services/actions/get-products";
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
+export default function Index() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [detalle, setDetalle] = useState<Product | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    getProducts()
+      .then(setProducts)
+      .catch(() => setError(true))
+      .finally(() => setCargando(false));
+  }, []);
+
+  if (cargando) return <ActivityIndicator size="large" />;
+
+  if (error) return <Text>Error al cargar productos</Text>;
+
+ 
+  if (detalle) {
     return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+      <ScrollView style={{ padding: 20 }}>
+        <Button title="Volver" onPress={() => setDetalle(null)} />
+
+        <Image
+          source={{ uri: detalle.image }}
+          style={{ width: 200, height: 200, alignSelf: "center" }}
+          resizeMode="contain"
+        />
+
+        <Text style={{ fontSize: 22 }}>{detalle.name}</Text>
+        <Text>Precio: ${detalle.price}</Text>
+        <Text>Categoría: {detalle.category}</Text>
+        <Text>Descripción: {detalle.description}</Text>
+      </ScrollView>
     );
   }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+
+  
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    <View style={{ flex: 1 }}>
+      <Text style={{ fontSize: 24, textAlign: "center" }}>
+        Mis Productos
+      </Text>
+
+      <FlatList
+        data={products}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() => setDetalle(item)}
+            style={{
+              padding: 15,
+              margin: 10,
+              backgroundColor: "white",
+              borderRadius: 10,
+            }}
+          >
+            <Image
+              source={{ uri: item.image }}
+              style={{ width: 100, height: 100 }}
+              resizeMode="contain"
+            />
+
+            <Text>{item.name}</Text>
+            <Text>Precio: ${item.price}</Text>
+          </TouchableOpacity>
+        )}
+      />
+    </View>
   );
 }
-
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
-});
